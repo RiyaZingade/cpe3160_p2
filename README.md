@@ -1,4 +1,4 @@
- # cep3160 assignment 5
+ # cep3160 project 2
 
 A5 - SPI Digital Analog Converter
 
