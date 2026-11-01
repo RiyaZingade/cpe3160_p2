@@ -6,6 +6,9 @@
 
 #include "main.h"
 #include "stm32l476xx.h"
+#include "keypad.h"
+#include "dac.h"
+
 
 #define SPI_MOSI 7
 #define SPI_SCK 5
