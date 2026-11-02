@@ -2,11 +2,8 @@
 #include "timer.h"
 #include "dac.h"
 
-static const uint16_t sine_table[8] = {
-    1862, 3178, 3724, 3178, 1862, 545, 0, 545
-}
-
 uint16_t counter = 0;
+
 
 void Error_Handler(void)
 {
@@ -53,7 +50,7 @@ void TIM2_IRQHandler(void){
             counter = 0;
         }
 
-        
+
     }
 
 
