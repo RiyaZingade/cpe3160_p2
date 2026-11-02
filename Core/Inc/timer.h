@@ -14,7 +14,7 @@
 #define TIM_CC1IE_BIT 1
 
 void Error_Handler(void);
-void timer_init(void);
+void TIMER_init(void);
 void TIM2_IRQHandler(void);
 
 #endif

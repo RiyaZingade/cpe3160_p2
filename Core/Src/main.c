@@ -8,64 +8,59 @@
 #include "stm32l476xx.h"
 #include "keypad.h"
 #include "dac.h"
+#include "timer.h"
 
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-#define SPI_MOSI 7
-#define SPI_SCK 5
-#define SPI_CS 4 // for chip select
+  /** Configure the main internal regulator output voltage
+  */
+  if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+  //RCC_OscInitStruct.MSIState = RCC_MSI_ON;  //datasheet says NOT to turn on the MSI then change the frequency.
+  RCC_OscInitStruct.MSICalibrationValue = 0;
+  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_10;
+	/* from stm32l4xx_hal_rcc.h
+	#define RCC_MSIRANGE_0                 MSI = 100 KHz
+	#define RCC_MSIRANGE_1                 MSI = 200 KHz
+	#define RCC_MSIRANGE_2                 MSI = 400 KHz
+	#define RCC_MSIRANGE_3                 MSI = 800 KHz
+	#define RCC_MSIRANGE_4                 MSI = 1 MHz
+	#define RCC_MSIRANGE_5                 MSI = 2 MHz
+	#define RCC_MSIRANGE_6                 MSI = 4 MHz
+	#define RCC_MSIRANGE_7                 MSI = 8 MHz
+	#define RCC_MSIRANGE_8                 MSI = 16 MHz
+	#define RCC_MSIRANGE_9                 MSI = 24 MHz
+	#define RCC_MSIRANGE_10                MSI = 32 MHz
+	#define RCC_MSIRANGE_11                MSI = 48 MHz   dont use this one*/
+  RCC_OscInitStruct.MSIState = RCC_MSI_ON;  //datasheet says NOT to turn on the MSI then change the frequency.
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-void DAC_init(){
-
-	// configure MOSI, MISO, SCK pins
-
-	//telling STM32 that we want peripheral to control PA7, not normal GPIO software
-	GPIOA->MODER &= ~(0x3U << SPI_PIN * 2);
-	GPIOA->MODER |= (0x2U << SPI_PIN * 2);
-
-	// telling STM32 that we want peripheral to control PA5, not GPIO software 
-	GPIOA->MODER &= ~(0x3U << SPI_SCK * 2);
-	GPIOA->MODER |= (0x2U << SPI_SCK * 2);
-
-	//telling STM32 WHICH peripheral function should control PA7 --> PA7 uses AF5 for SPI1_MOSI
-	GPIOA->AFR[0] &= ~(0xFU << SPI_PIN * 4); //clears all 4 pins in that area
-	GPIOA->AFR[0] |= (0x5U << SPI_PIN * 4); // setting the 4 pins to 0101
-
-	//telling STM32 which periferal function should control PA5 --> PA5 uses AF5 for SPI1_SCk
-	GPIOA->AFR[0] &= ~(0xFU << SPI_SCK * 4);
-	GPIOA->AFR[0] |= (0x5U << SPI_SCK * 4);
-
-	
-	// configuring CR1 for SPI1
-	//setting STM32 board to be the master (stm is generating the clock signal --> SCK)
-	SPI1->CR1 |= (1U << 2);
-	SPI1->CR1 &= ~(1U << 1); //CPOL --> clock polarity
-	SPI1->CR1 &= ~(1U << 0); // CPHA --> clock phase
-	SPI1->CR1 &= ~(1U << 7); // LSBFIRST --> MCP4921 expectes 16bit command to be MSB first, so this value will be 0
-	SPI1->CR1 &= ~(7U << 3); // setting BR[2:0] to 8 so we can divide clock by 8 
-	SPI1->CR1 |= (2U << 3); // BR is Buade Rate which is a clock prescaler that controls communication speed
-	SPI1->CR1 |= (1U << 9); // bit 9 is SSM --> software slave management
-	SPI1->CR1 |= (1U << 8); // bit 8 is SSI --> internal slave select 
-
-	// setting pa4 to output mode (not alt func because we are manually controlling it rather than a peripheral)
-	// 0 --> HIGH means DAC is selected and 1 --> means DAC is deselected 
-	GPIOA->MODER &= ~(0x3U << SPI_CS * 2);
-	GPIOA->MODER |= (1U << SPI_CS * 2);
-
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
-
-int DAC_write(uint16_t input){
-    // DAC takes 16-bit command, top 4 bits are control bits
-    // bottom 12-bits: write value
-    uint16_t command = (input & 0x0FFF) | 0x3000;
-
-    
-    
-}
-
-uint16_t DAC_volt_conv(uint16_t voltage_mV) {
-    return voltage_mV * 4096 / 3300
-}
-
 
 int main(void)
 {
@@ -75,6 +70,9 @@ int main(void)
 	RCC->APB2ENR |= (RCC_APB2ENR_SPI1EN); //enable SPI clock 
 	
 	DAC_init();
+	KEYPAD_init();
+	TIMER_init();
+
 
 
 	while(1) {
