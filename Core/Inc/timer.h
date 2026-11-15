@@ -12,9 +12,10 @@
 
 #define TIMER_PIN 5
 #define TIM_CC1IE_BIT 1
-#define SINE_POINTS 200
+#define DAC_HIGH_CODE 3724U
+#define DAC_LOW_CODE  0U
 
-static uint16_t sine_table[SINE_POINTS];
+
 
 typedef enum{
     WAVEFORM_TRIANGLE,
@@ -23,7 +24,7 @@ typedef enum{
     WAVEFORM_SINE
 } waveform_type;
 
-volatile waveform_type curr_waveform = WAVEFORM_TRIANGLE;
+extern volatile waveform_type curr_waveform;
 
 void Error_Handler(void);
 void TIMER_init(void);

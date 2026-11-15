@@ -2,7 +2,12 @@
 #include "timer.h"
 #include "dac.h"
 
+#define SINE_POINTS 200
+
 uint16_t counter = 0;
+static uint16_t sine_table[SINE_POINTS];
+
+waveform_type curr_waveform = WAVEFORM_SQUARE; // square waveform required at startup
 
 
 void Error_Handler(void)
@@ -14,6 +19,58 @@ void Error_Handler(void)
   {
   }
   /* USER CODE END Error_Handler_Debug */
+}
+
+void sine_table_generator(){
+    for (uint16_t i = 0; i < SINE_POINTS; i++) {
+
+        double angle = (2.0 * 3.141592653589793 * i) / SINE_POINTS;
+
+        double voltage = 1.5 + 1.5 * sin(angle);
+
+        // TODO: Convert voltage into a 12-bit DAC code
+        uint16_t code = voltage/3.3 * 4096;
+        // TODO: Store the result in sine_table[i]
+        sine_table[i] = code;
+    }
+}
+
+uint16_t waveform_generator(waveform_type type, uint16_t count, float duty_cycle){
+
+    uint16_t code = 0;
+
+    switch(type){
+        case WAVEFORM_SQUARE:
+            int first_half_range = 200 * duty_cycle; // this will be from 0 - low_range and the second part will be low_range + 1 to 199
+            if(count < first_half_range){
+                code = DAC_HIGH_CODE;
+            } else {
+                code = DAC_LOW_CODE;
+            }
+            //logic
+            break;
+        case WAVEFORM_TRIANGLE:
+            float slope = 37.24; //--> 3724 is the 3.0 voltage value in decimal format (practiced for midterm2) since DAC only takes digital values
+                                // whole point of the DIGITAL to ANALOG part
+            if(count < 100){
+                code = slope * count;
+            } else {
+                code = 3724*(200-count)/100; //7448 is double 3724 which we got by figuring out at count 100 we want code to be 3724
+            }
+
+            
+            // logic
+            break;
+        case WAVEFORM_SAWTOOTH:
+            code = (3724UL * count)/200U;
+            break;
+        case WAVEFORM_SINE:
+            code = sine_table[count];
+            break;
+    }
+
+    return code;
+
 }
 
 // will be determining WHEN interrupts happen
@@ -44,11 +101,13 @@ void TIM2_IRQHandler(void){
         TIM2->SR &= ~(1 << 0);
 
         // use sine_table[counter] value and if counter += 1 is 8 then reset counter to 0
-        DAC_write(sine_table[counter]);
+        // DAC_write(sine_table[counter]);
         counter += 1;
-        if(counter == 8){
+        if(counter == 200){
             counter = 0;
         }
+        //depending on buttons clicked, change this line below
+        DAC_write(waveform_generator(curr_waveform, counter, 0));
 
 
     }
